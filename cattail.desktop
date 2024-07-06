@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Cattail
+Comment=An unofficial Tailscale client.
+Exec=sh -c "$HOME/.local/bin/cattail"
+Icon=com.cattail
+Type=Application
+Categories=Network;
+SingleMainWindow=true
+X-GNOME-UsesNotifications=true

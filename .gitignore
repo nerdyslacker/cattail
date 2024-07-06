@@ -1,0 +1,12 @@
+.idea
+build
+node_modules/
+jspm_packages/
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+.npm
+wailsjs
+dist
