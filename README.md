@@ -17,12 +17,25 @@ make install
 
 # Features
 
-* File upload and reception.
-* Account switching.
-* Host listing.
-* Select an exit node.
-* Host IP listing.
-* Some tag description (like OS, or whether it's online or how long since it was last seen).
+- [x] Account switching
+- [x] Detailed peer information
+- [x] Tray menu for quick access
+- [x] Copying of IP addresses/DNS name
+- [ ] Pinging of peers
+- [ ] Set control URL
+- [ ] Adding tags
+- [x] Exit node management
+- [x] Allow LAN access
+- [x] Accept routes
+- [x] Run SSH
+- [ ] Advertise routes
+- [x] Toggle tailscale status
+- [ ] Toggle taildrop status and change path
+- [x] Sending files
+- [x] Receiving files
+- [ ] Notification on tailscale status change
+- [ ] Notification on peer addition/removal
+- [ ] Monitoring traffic
 
 <div style="text-align: center;">
     <img src="_images/screenshot.png" />
