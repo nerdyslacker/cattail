@@ -626,6 +626,9 @@ func (tailSvc *tailScaleService) Refresh() {
 				// Call UpdateStatus and update previousStatus
 				currentStatus := tailSvc.UpdateStatus(previousStatus)
 				previousStatus = currentStatus
+				runtime.EventsOn(tailSvc.ctx, "wails:window:hide", func(optionalData ...interface{}) {
+					tailSvc.traySvc.isWindowHidden = true
+				})
 			case <-tailSvc.ctx.Done():
 				// Stop polling when the context is cancelled
 				return

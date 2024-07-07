@@ -4,6 +4,7 @@ import WindowMax from '@/components/icons/WindowMax.vue'
 import WindowClose from '@/components/icons/WindowClose.vue'
 import { computed } from 'vue'
 import { useThemeVars } from 'naive-ui'
+import { EventsEmit } from 'wailsjs/runtime'
 import { Quit, WindowMinimise, WindowToggleMaximise, WindowHide } from 'wailsjs/runtime/runtime.js'
 import WindowRestore from '@/components/icons/WindowRestore.vue'
 
@@ -32,6 +33,9 @@ const handleMaximise = () => {
 
 const handleClose = () => {
     WindowHide()
+    EventsEmit("wails:window:hide", () => {
+        console.log("Window was hidden")
+    })
     // Quit()
 }
 </script>

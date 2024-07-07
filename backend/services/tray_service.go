@@ -24,8 +24,9 @@ func trayIcon(isOnline bool) []byte {
 }
 
 type trayService struct {
-	showMenuItem *systray.MenuItem
-	quitMenuItem *systray.MenuItem
+	showMenuItem   *systray.MenuItem
+	quitMenuItem   *systray.MenuItem
+	isWindowHidden bool
 }
 
 func TrayService(isOnline bool) *trayService {
@@ -37,8 +38,9 @@ func TrayService(isOnline bool) *trayService {
 	quit := systray.AddMenuItem("Quit", "")
 
 	return &trayService{
-		showMenuItem: show,
-		quitMenuItem: quit,
+		showMenuItem:   show,
+		quitMenuItem:   quit,
+		isWindowHidden: false,
 	}
 }
 
@@ -67,6 +69,7 @@ func (ts *trayService) Stop() {
 func (ts *trayService) SetActions(ctx context.Context) {
 	ts.showMenuItem.Click(func() {
 		runtime.WindowShow(ctx)
+		ts.isWindowHidden = false
 	})
 
 	ts.quitMenuItem.Click(func() {
@@ -75,13 +78,13 @@ func (ts *trayService) SetActions(ctx context.Context) {
 	})
 
 	systray.SetOnClick(func(menu systray.IMenu) {
-		// x, y := runtime.WindowGetPosition(ctx)
-		runtime.WindowShow(ctx)
-		// if x == 0 && y == 0 {
-		// 	runtime.WindowShow(ctx)
-		// } else {
-		// 	runtime.WindowHide(ctx)
-		// }
+		if ts.isWindowHidden {
+			runtime.WindowShow(ctx)
+			ts.isWindowHidden = false
+		} else {
+			runtime.WindowHide(ctx)
+			ts.isWindowHidden = true
+		}
 	})
 }
 
