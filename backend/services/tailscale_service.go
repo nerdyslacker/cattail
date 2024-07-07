@@ -63,13 +63,11 @@ func Notify(format string, args ...interface{}) {
 	beeep.Notify("Cattail", fmt.Sprintf(format, args...), iconPath)
 }
 
-// startup is called when the app starts. The context is saved
-// so we can call the runtime methods
 func (tailSvc *tailScaleService) Startup(ctx context.Context) {
 	tailSvc.ctx = ctx
 	tailSvc.fileMod = make(chan struct{}, 1)
 
-	Notify("Tailscale started")
+	Notify("Cattail started")
 
 	go tailSvc.watchFiles()
 	go tailSvc.watchIPN()
@@ -81,6 +79,9 @@ func (tailSvc *tailScaleService) Startup(ctx context.Context) {
 
 	// Init tray
 	go tailSvc.traySvc.Start(func() { tailSvc.initTray() })
+
+	// Refresh status
+	tailSvc.Refresh()
 }
 
 func (tailSvc *tailScaleService) initTray() {
@@ -91,67 +92,6 @@ func (tailSvc *tailScaleService) initTray() {
 	}
 
 	tailSvc.traySvc.SetActions(tailSvc.ctx)
-}
-
-func (tailSvc *tailScaleService) watchFiles() {
-	prevFiles := 0
-
-	for {
-		select {
-		case <-time.After(time.Second * 10):
-		case <-tailSvc.fileMod:
-		}
-
-		files, err := tailSvc.client.AwaitWaitingFiles(tailSvc.ctx, time.Second)
-		if err != nil {
-			log.Println(err)
-		}
-
-		if len(files) != prevFiles {
-			prevFiles = len(files)
-
-			for _, file := range files {
-				Notify("File %s available", file.Name)
-			}
-
-			runtime.EventsEmit(tailSvc.ctx, "update_files")
-		}
-	}
-}
-
-func (tailSvc *tailScaleService) watchIPN() {
-	for {
-		watcher, err := tailSvc.client.WatchIPNBus(tailSvc.ctx, 0)
-		if err != nil {
-			log.Printf("loading IPN bus watcher: %s\n", err)
-			time.Sleep(time.Second)
-			continue
-		}
-
-		for {
-			not, err := watcher.Next()
-			if err != nil {
-				log.Printf("Watching IPN Bus: %s\n", err)
-				break
-			}
-
-			if not.FilesWaiting != nil {
-				tailSvc.fileMod <- struct{}{}
-			}
-
-			if not.State != nil {
-				if *not.State == ipn.Running {
-					runtime.EventsEmit(tailSvc.ctx, "app_running")
-				} else {
-					runtime.EventsEmit(tailSvc.ctx, "app_not_running")
-				}
-			}
-
-			runtime.EventsEmit(tailSvc.ctx, "update_all")
-
-			log.Printf("IPN bus update: %v\n", not)
-		}
-	}
 }
 
 func (tailSvc *tailScaleService) PingPeers() {
@@ -412,6 +352,100 @@ func (tailSvc *tailScaleService) AdvertiseExitNode(dnsName string) {
 	}
 }
 
+func (tailSvc *tailScaleService) AdvertiseRoutes(routes []netip.Prefix) error {
+	curPrefs, err := tailSvc.client.GetPrefs(tailSvc.ctx)
+
+	if err != nil {
+		panic(err)
+	}
+
+	exit := curPrefs.AdvertisesExitNode()
+	curPrefs.AdvertiseRoutes = routes
+	curPrefs.SetAdvertiseExitNode(exit)
+
+	_, err = tailSvc.client.EditPrefs(tailSvc.ctx, &ipn.MaskedPrefs{
+		Prefs:              *curPrefs,
+		AdvertiseRoutesSet: true,
+	})
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	return nil
+}
+
+func (tailSvc *tailScaleService) AllowLANAccess(allow bool) error {
+	prefs := ipn.Prefs{
+		ExitNodeAllowLANAccess: allow,
+	}
+
+	_, err := tailSvc.client.EditPrefs(tailSvc.ctx, &ipn.MaskedPrefs{
+		Prefs:                     prefs,
+		ExitNodeAllowLANAccessSet: true,
+	})
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	return nil
+}
+
+func (tailSvc *tailScaleService) AcceptRoutes(accept bool) error {
+	prefs := ipn.Prefs{
+		RouteAll: accept,
+	}
+
+	_, err := tailSvc.client.EditPrefs(tailSvc.ctx, &ipn.MaskedPrefs{
+		Prefs:       prefs,
+		RouteAllSet: true,
+	})
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	return nil
+}
+
+func (tailSvc *tailScaleService) RunSSH(run bool) error {
+	prefs := ipn.Prefs{
+		RunSSH: run,
+	}
+
+	_, err := tailSvc.client.EditPrefs(tailSvc.ctx, &ipn.MaskedPrefs{
+		Prefs:     prefs,
+		RunSSHSet: true,
+	})
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	return nil
+}
+
+func (tailSvc *tailScaleService) SetControlURL(controlURL string) error {
+	curPrefs, err := tailSvc.client.GetPrefs(tailSvc.ctx)
+
+	if err != nil {
+		panic(err)
+	}
+
+	curPrefs.ControlURL = controlURL
+
+	err = tailSvc.client.Start(tailSvc.ctx, ipn.Options{
+		UpdatePrefs: curPrefs,
+	})
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	return nil
+}
+
 func (tailSvc *tailScaleService) CopyClipboard(s string) {
 	tailSvc.initClipboard.Do(func() {
 		if err := clipboard.Init(); err != nil {
@@ -458,43 +492,11 @@ func (tailSvc *tailScaleService) Self() types.Peer {
 	}
 
 	peer.ExitNodeOption = curPrefs.AdvertisesExitNode()
+	peer.AllowLANAccess = curPrefs.ExitNodeAllowLANAccess
+	peer.AcceptRoutes = curPrefs.RouteAll
+	peer.RunSSH = curPrefs.RunSSH
 
 	return peer
-}
-
-func convertPeer(status *ipnstate.PeerStatus) types.Peer {
-	peerName, _ := splitPeerNamespace(status.DNSName)
-	return types.Peer{
-		ID:             string(status.ID),
-		DNSName:        status.DNSName,
-		Name:           peerName,
-		ExitNode:       status.ExitNode,
-		ExitNodeOption: status.ExitNodeOption,
-		Online:         status.Online,
-		OS:             status.OS,
-		Addrs:          status.Addrs,
-		Created:        status.Created,
-		LastSeen:       status.LastSeen,
-		Routes: func() []string {
-			if status.PrimaryRoutes == nil {
-				return nil
-			}
-
-			return tl.Map(status.PrimaryRoutes.AsSlice(), func(prefix netip.Prefix) string {
-				return prefix.String()
-			})
-		}(),
-		IPs: tl.Map(status.TailscaleIPs, func(ip netip.Addr) string {
-			return ip.String()
-		}),
-	}
-}
-
-func splitPeerNamespace(dnsName string) (peerName, namespace string) {
-	names := strings.Split(dnsName, ".")
-	namespace = strings.Join(names[1:], ".")
-	peerName = names[0]
-	return peerName, namespace
 }
 
 func (tailSvc *tailScaleService) Files() []types.File {
@@ -594,6 +596,7 @@ func (tailSvc *tailScaleService) UpdateStatus(previousOnlineStatus bool) bool {
 
 	if online != previousOnlineStatus {
 		tailSvc.traySvc.setStatus(online)
+		runtime.EventsEmit(tailSvc.ctx, "tailscale:status-changed", online)
 	}
 
 	return online
@@ -607,4 +610,123 @@ func (tailSvc *tailScaleService) Start() error {
 // Stop disconnects the local peer from the Tailscale network.
 func (tailSvc *tailScaleService) Stop() error {
 	return cli.Run([]string{"down"})
+}
+
+func (tailSvc *tailScaleService) Refresh() {
+	var previousStatus bool
+
+	// Start a goroutine for polling
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				// Call UpdateStatus and update previousStatus
+				currentStatus := tailSvc.UpdateStatus(previousStatus)
+				previousStatus = currentStatus
+			case <-tailSvc.ctx.Done():
+				// Stop polling when the context is cancelled
+				return
+			}
+		}
+	}()
+}
+
+func (tailSvc *tailScaleService) watchFiles() {
+	prevFiles := 0
+
+	for {
+		select {
+		case <-time.After(time.Second * 10):
+		case <-tailSvc.fileMod:
+		}
+
+		files, err := tailSvc.client.AwaitWaitingFiles(tailSvc.ctx, time.Second)
+		if err != nil {
+			log.Println(err)
+		}
+
+		if len(files) != prevFiles {
+			prevFiles = len(files)
+
+			for _, file := range files {
+				Notify("File %s available", file.Name)
+			}
+
+			runtime.EventsEmit(tailSvc.ctx, "update_files")
+		}
+	}
+}
+
+func (tailSvc *tailScaleService) watchIPN() {
+	for {
+		watcher, err := tailSvc.client.WatchIPNBus(tailSvc.ctx, 0)
+		if err != nil {
+			log.Printf("loading IPN bus watcher: %s\n", err)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		for {
+			not, err := watcher.Next()
+			if err != nil {
+				log.Printf("Watching IPN Bus: %s\n", err)
+				break
+			}
+
+			if not.FilesWaiting != nil {
+				tailSvc.fileMod <- struct{}{}
+			}
+
+			if not.State != nil {
+				if *not.State == ipn.Running {
+					runtime.EventsEmit(tailSvc.ctx, "app_running")
+				} else {
+					runtime.EventsEmit(tailSvc.ctx, "app_not_running")
+				}
+			}
+
+			runtime.EventsEmit(tailSvc.ctx, "update_all")
+
+			log.Printf("IPN bus update: %v\n", not)
+		}
+	}
+}
+
+func convertPeer(status *ipnstate.PeerStatus) types.Peer {
+	peerName, _ := splitPeerNamespace(status.DNSName)
+	return types.Peer{
+		ID:             string(status.ID),
+		DNSName:        status.DNSName,
+		Name:           peerName,
+		ExitNode:       status.ExitNode,
+		ExitNodeOption: status.ExitNodeOption,
+		Online:         status.Online,
+		OS:             status.OS,
+		Addrs:          status.Addrs,
+		Created:        status.Created,
+		LastSeen:       status.LastSeen,
+		LastWrite:      status.LastWrite,
+		Routes: func() []string {
+			if status.PrimaryRoutes == nil {
+				return nil
+			}
+
+			return tl.Map(status.PrimaryRoutes.AsSlice(), func(prefix netip.Prefix) string {
+				return prefix.String()
+			})
+		}(),
+		IPs: tl.Map(status.TailscaleIPs, func(ip netip.Addr) string {
+			return ip.String()
+		}),
+	}
+}
+
+func splitPeerNamespace(dnsName string) (peerName, namespace string) {
+	names := strings.Split(dnsName, ".")
+	namespace = strings.Join(names[1:], ".")
+	peerName = names[0]
+	return peerName, namespace
 }

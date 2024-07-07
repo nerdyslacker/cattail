@@ -66,7 +66,6 @@ func (ts *trayService) Stop() {
 
 func (ts *trayService) SetActions(ctx context.Context) {
 	ts.showMenuItem.Click(func() {
-		// runtime.Show(ctx)
 		runtime.WindowShow(ctx)
 	})
 
@@ -76,12 +75,13 @@ func (ts *trayService) SetActions(ctx context.Context) {
 	})
 
 	systray.SetOnClick(func(menu systray.IMenu) {
-		x, y := runtime.WindowGetPosition(ctx)
-		if x == 0 && y == 0 {
-			runtime.WindowShow(ctx)
-		} else {
-			runtime.WindowHide(ctx)
-		}
+		// x, y := runtime.WindowGetPosition(ctx)
+		runtime.WindowShow(ctx)
+		// if x == 0 && y == 0 {
+		// 	runtime.WindowShow(ctx)
+		// } else {
+		// 	runtime.WindowHide(ctx)
+		// }
 	})
 }
 

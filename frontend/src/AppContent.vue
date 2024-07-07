@@ -12,6 +12,7 @@ import { isMacOS } from '@/utils/platform.js'
 import iconUrl from '@/assets/images/icon.png'
 import ResizeableWrapper from '@/components/common/ResizeableWrapper.vue'
 import { extraTheme } from '@/utils/extra_theme.js'
+import { FrownOpenRegular } from '@vicons/fa'
 
 const themeVars = useThemeVars()
 
@@ -105,6 +106,10 @@ watchEffect(async () => {
   await updateStatus()
 })
 
+EventsOn('tailscale:status-changed', (currentStatus) => {
+    isOnline.value = currentStatus;
+})
+
 EventsOn('window_changed', (info) => {
     const { fullscreen, maximised } = info
     onToggleFullscreen(fullscreen === true)
@@ -158,9 +163,8 @@ onMounted(async () => {
                     :size="data.toolbarHeight"
                     style="align-self: flex-start" />
             </div>
-
             <!-- content -->
-            <div
+            <div v-if="isOnline"
                 id="app-content"
                 :style="prefStore.generalFont"
                 class="flex-box-h flex-item-expand"
@@ -179,6 +183,18 @@ onMounted(async () => {
                     <content-pane class="flex-item-expand" />
                 </div>
             </div>
+            <n-space v-else class="content-area flex-box-h flex-item-expand" align="center" justify="center">
+                <n-empty size="large" description="No Connection">
+                    <template #icon>
+                        <n-icon :component="FrownOpenRegular"></n-icon>
+                    </template>
+                    <template #extra>
+                        <n-tag type="warning" size="large">
+                            TAILSCALE IS NOT CONNECTED
+                        </n-tag>
+                    </template>
+                </n-empty>
+            </n-space>
         </div>
     </n-spin>
 </template>

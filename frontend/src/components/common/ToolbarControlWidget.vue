@@ -4,7 +4,7 @@ import WindowMax from '@/components/icons/WindowMax.vue'
 import WindowClose from '@/components/icons/WindowClose.vue'
 import { computed } from 'vue'
 import { useThemeVars } from 'naive-ui'
-import { Quit, WindowMinimise, WindowToggleMaximise } from 'wailsjs/runtime/runtime.js'
+import { Quit, WindowMinimise, WindowToggleMaximise, WindowHide } from 'wailsjs/runtime/runtime.js'
 import WindowRestore from '@/components/icons/WindowRestore.vue'
 
 const themeVars = useThemeVars()
@@ -31,7 +31,8 @@ const handleMaximise = () => {
 }
 
 const handleClose = () => {
-    Quit()
+    WindowHide()
+    // Quit()
 }
 </script>
 

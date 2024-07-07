@@ -15,6 +15,9 @@ type Peer struct {
 	Name           string    `json:"name"`
 	ExitNode       bool      `json:"exit_node"`
 	ExitNodeOption bool      `json:"exit_node_option"`
+	AllowLANAccess bool      `json:"allow_lan_access"`
+	AcceptRoutes   bool      `json:"accept_routes"`
+	RunSSH         bool      `json:"run_ssh"`
 	Online         bool      `json:"online"`
 	OS             string    `json:"os"`
 	Addrs          []string  `json:"addrs"`
@@ -22,6 +25,7 @@ type Peer struct {
 	IPs            []string  `json:"ips"`
 	Created        time.Time `json:"created_at"`
 	LastSeen       time.Time `json:"last_seen"`
+	LastWrite      time.Time `json:"last_write"`
 }
 
 type File struct {

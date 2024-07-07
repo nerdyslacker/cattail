@@ -50,7 +50,7 @@ func main() {
 		EnableDefaultContextMenu: true,
 		HideWindowOnClose:        true,
 		DisableResize:            true,
-		// StartHidden:              true,
+		StartHidden:              true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

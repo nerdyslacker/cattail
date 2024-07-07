@@ -14,11 +14,17 @@ import {
     SwitchTo,
     UploadFile,
     AdvertiseExitNode,
+    AdvertiseRoutes,
+    AllowLANAccess,
+    AcceptRoutes,
+    RunSSH,
+    SetControlURL,
     Start,
     Stop,
     GetStatus,
     UpdateStatus,
 } from 'wailsjs/go/services/tailScaleService.js'
+// import humanizeDuration from 'humanize-duration'
 
 const useTailScaleStore = defineStore('tailScaleStore', {
     state: () => ({
@@ -67,7 +73,6 @@ const useTailScaleStore = defineStore('tailScaleStore', {
             return await UpdateStatus(prevOnline)
         },
         async switchAccount(name) {
-            // const name = event.target.text
             await SwitchTo(name)
         },
         async setExitNode(event) {
@@ -87,6 +92,21 @@ const useTailScaleStore = defineStore('tailScaleStore', {
             })
             await AdvertiseExitNode(this.selectedPeer.dns_name)
         },
+        async adverstiseRoutes(routes) {
+            await AdvertiseRoutes(routes)
+        }, 
+        async allowLANAccess(allow) {
+            await AllowLANAccess(allow)
+        },
+        async acceptRoutes(accept) {
+            await AcceptRoutes(accept)
+        },        
+        async runSSH(run) {
+            await RunSSH(run)
+        },
+        async setControlURL(controlURL) {
+            await SetControlURL(controlURL)
+        },
         async acceptFile(name) {
             await AcceptFile(name)
         },
@@ -103,6 +123,8 @@ const useTailScaleStore = defineStore('tailScaleStore', {
             const date = new Date(ref)
             const now = new Date()
             const res = (now - date) / 1000
+            // const res = Math.round(now - date)
+            // return humanizeDuration(res, { units: ["d"], round: true}) + ' ago'
             if (res < 3600) {
                 return Math.round(res / 60) + ' minutes ago'
             } else if (res < 86400) {

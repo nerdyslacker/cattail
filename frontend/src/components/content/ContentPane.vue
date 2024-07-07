@@ -1,5 +1,5 @@
 <script setup>
-import { h, computed, ref } from 'vue'
+import { h, computed, ref, reactive } from 'vue'
 import { useThemeVars, NButton } from 'naive-ui'
 const themeVars = useThemeVars()
 import useTailScaleStore from '../../stores/tailscale.js'
@@ -16,8 +16,6 @@ const accountOptions = computed(() => tailScaleStore.otherAccounts.map(acc => {
 const handleAccountSelect = (key) => {
   tailScaleStore.switchAccount(key)
 }
-
-const selected_peer = computed(() => tailScaleStore.selectedPeer);
 
 const files = computed(() => tailScaleStore.files.map(file => {
   return {
@@ -69,9 +67,34 @@ const columns = [
 ]
 
 const data = ref(files)
-
 const dataTableInstRef = ref(null)
+ 
+const selected_peer = reactive(computed(() => tailScaleStore.selectedPeer))
 
+const onToggleSetExitNode = async (event) => {
+  await tailScaleStore.setExitNode(event);
+  selected_peer.value.exit_node = !selected_peer.value.exit_node;
+}
+
+const onToggleAdvertiseExitNode = async (event) => {
+  await tailScaleStore.advertiseExitNode(event);
+  selected_peer.value.exit_node_option = !selected_peer.value.exit_node_option;
+}
+
+const onToggleAllowLANAccess = async (checked) => {
+  await tailScaleStore.allowLANAccess(checked);
+  selected_peer.value.allow_lan_access = checked;
+}
+
+const onToggleAcceptRoutes = async (checked) => {
+  await tailScaleStore.acceptRoutes(checked);
+  selected_peer.value.accept_routes = checked;
+}
+
+const onToggleRunSSH = async (checked) => {
+  await tailScaleStore.runSSH(checked);
+  selected_peer.value.run_ssh = checked;
+}
 </script>
 
 <template>
@@ -148,6 +171,19 @@ const dataTableInstRef = ref(null)
                     {{ selected_peer.dns_name === tailScaleStore.self.dns_name || selected_peer.online ? "now" :
             tailScaleStore.dateDiff(selected_peer.last_seen) }}
                   </n-thing>
+                </n-list-item>                
+                <n-list-item>
+                  <template #prefix>
+                    <n-tag>Last update </n-tag>
+                  </template>
+                  <template #suffix>
+                    <n-button style="visibility: hidden;" @click="tailScaleStore.copyClipboard(selected_peer.last_write)">
+                      <n-icon :component="CopyRegular" size="16" :depth="1" />
+                    </n-button>
+                  </template>
+                  <n-thing style="text-align: right;">
+                    {{ new Date(selected_peer.last_write).getUTCFullYear() != 1 ? tailScaleStore.dateDiff(selected_peer.last_write) : '-'  }}
+                  </n-thing>
                 </n-list-item>
                 <n-list-item>
                   <template #prefix>
@@ -194,26 +230,48 @@ const dataTableInstRef = ref(null)
                 </n-flex>
               </n-space>
             </n-card>
-            <n-card title="Exit node" size="small">
+            <n-card title="Options" size="small">
               <n-list hoverable clickable>
-                <n-list-item v-if="selected_peer.dns_name === tailScaleStore.self.dns_name">
-                  <template #prefix>
-                    <n-tag>Advertise exit node</n-tag>
-                  </template>
-                  <n-thing>
-                    <n-switch size="large" @click="tailScaleStore.advertiseExitNode"
-                      :value="selected_peer.exit_node_option" />
-                  </n-thing>
-                </n-list-item>
                 <n-list-item v-if="selected_peer.dns_name !== tailScaleStore.self.dns_name">
                   <template #prefix>
                     <n-tag>Use exit node</n-tag>
                   </template>
-                  <n-thing>
+                  <n-thing style="text-align: right;">
                     <n-switch v-if="!selected_peer.online || !selected_peer.exit_node_option" size="large"
-                      @click="tailScaleStore.setExitNode" disabled />
-                    <n-switch v-else size="large" @click="tailScaleStore.setExitNode"
-                      :value="selected_peer.exit_node" />
+                    @click="onToggleSetExitNode" disabled />
+                    <n-switch v-else size="large" @click="onToggleSetExitNode" :value="selected_peer.exit_node" />
+                  </n-thing>
+                </n-list-item>
+                <n-list-item v-if="selected_peer.dns_name === tailScaleStore.self.dns_name">
+                  <template #prefix>
+                    <n-tag>Advertise exit node</n-tag>
+                  </template>
+                  <n-thing  style="text-align: right;">
+                    <n-switch size="large" @click="onToggleAdvertiseExitNode"  :value="selected_peer.exit_node_option" />
+                  </n-thing>
+                </n-list-item>
+                <n-list-item v-if="selected_peer.dns_name === tailScaleStore.self.dns_name">
+                  <template #prefix>
+                    <n-tag>Allow LAN access</n-tag>
+                  </template>
+                  <n-thing style="text-align: right;">
+                    <n-switch size="large" @update:value="onToggleAllowLANAccess"  :value="selected_peer.allow_lan_access" />
+                  </n-thing>
+                </n-list-item>
+                <n-list-item v-if="selected_peer.dns_name === tailScaleStore.self.dns_name">
+                  <template #prefix>
+                    <n-tag>Accept routes</n-tag>
+                  </template>
+                  <n-thing style="text-align: right;">
+                    <n-switch size="large" @update:value="onToggleAcceptRoutes" :value="selected_peer.accept_routes" />
+                  </n-thing>
+                </n-list-item>
+                <n-list-item v-if="selected_peer.dns_name === tailScaleStore.self.dns_name">
+                  <template #prefix>
+                    <n-tag>Run SSH</n-tag>
+                  </template>
+                  <n-thing style="text-align: right;">
+                    <n-switch size="large" @update:value="onToggleRunSSH" :value="selected_peer.run_ssh" />
                   </n-thing>
                 </n-list-item>
               </n-list>
