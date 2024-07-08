@@ -15,6 +15,8 @@ cd cattail
 make install
 ```
 
+or download the binary from [Releases](https://github.com/nerdyslacker/cattail/releases) page.
+
 # Features
 
 - [x] Account switching
