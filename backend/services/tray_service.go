@@ -32,9 +32,9 @@ func TrayService(isOnline bool) *trayService {
 	systray.SetIcon(trayIcon(isOnline))
 	systray.SetTitle("Cattail")
 
-	status := systray.AddMenuItem("", "")
-	systray.AddSeparator()
 	show := systray.AddMenuItem("Show", "")
+	systray.AddSeparator()
+	status := systray.AddMenuItem("", "")
 	systray.AddSeparator()
 	quit := systray.AddMenuItem("Quit", "")
 
