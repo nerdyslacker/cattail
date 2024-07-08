@@ -5,6 +5,7 @@ import (
 	"cattail/backend/services"
 	"context"
 	"embed"
+	"os"
 	"runtime"
 
 	"github.com/wailsapp/wails/v2"
@@ -34,6 +35,10 @@ func main() {
 	windowStartState := options.Normal
 	if maximised {
 		windowStartState = options.Maximised
+	}
+
+	if runtime.GOOS == "linux" {
+		_ = os.Setenv("GDK_BACKEND", "x11")
 	}
 
 	// Create application with options
