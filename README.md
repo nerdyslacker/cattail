@@ -2,6 +2,8 @@
 
 Cattail is an unofficial tailscale/headscale client using [Wails](https://wails.io) (Go + Vue3).
 
+> :warning: This application is an independent project and is not affiliated with the official Tailscale project. Use it at your own risk. The developers are not responsible for any issues or damages that may arise from using this application.
+
 <div style="text-align: center;">
     <img src="frontend/src/assets/images/logo.png" />
 </div>
