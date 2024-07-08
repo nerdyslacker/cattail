@@ -16,6 +16,7 @@ import (
 	tsutils "cattail/backend/utils/ts"
 
 	"github.com/dgrr/tl"
+	"github.com/energye/systray"
 	"github.com/gen2brain/beeep"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.design/x/clipboard"
@@ -91,7 +92,48 @@ func (tailSvc *tailScaleService) initTray() {
 		tailSvc.traySvc = TrayService(online)
 	}
 
-	tailSvc.traySvc.SetActions(tailSvc.ctx)
+	//tailSvc.traySvc.SetActions(tailSvc.ctx)
+	tailSvc.setTrayActions()
+}
+
+func (tailSvc *tailScaleService) setTrayActions() {
+	ts := tailSvc.traySvc
+	ctx := tailSvc.ctx
+	online := tailSvc.GetStatus()
+
+	ts.ToggleStatusItem(online)
+
+	ts.statusMenuItem.Click(func() {
+		if ts.statusMenuItem.Checked() {
+			ts.statusMenuItem.Uncheck()
+			ts.statusMenuItem.SetTitle("Start")
+			tailSvc.Stop()
+		} else {
+			ts.statusMenuItem.Check()
+			ts.statusMenuItem.SetTitle("Stop")
+			tailSvc.Start()
+		}
+	})
+
+	ts.showMenuItem.Click(func() {
+		runtime.WindowShow(ctx)
+		ts.isWindowHidden = false
+	})
+
+	ts.quitMenuItem.Click(func() {
+		ts.Stop()
+		runtime.Quit(ctx)
+	})
+
+	systray.SetOnClick(func(menu systray.IMenu) {
+		if ts.isWindowHidden {
+			runtime.WindowShow(ctx)
+			ts.isWindowHidden = false
+		} else {
+			runtime.WindowHide(ctx)
+			ts.isWindowHidden = true
+		}
+	})
 }
 
 func (tailSvc *tailScaleService) PingPeers() {
@@ -389,6 +431,12 @@ func (tailSvc *tailScaleService) AllowLANAccess(allow bool) error {
 		log.Println(err)
 	}
 
+	if allow {
+		Notify("LAN access has been granted.")
+	} else {
+		Notify("LAN access has been restricted.")
+	}
+
 	return nil
 }
 
@@ -406,6 +454,12 @@ func (tailSvc *tailScaleService) AcceptRoutes(accept bool) error {
 		log.Println(err)
 	}
 
+	if accept {
+		Notify("All routes acceptance is enabled.")
+	} else {
+		Notify("All routes acceptance is disabled.")
+	}
+
 	return nil
 }
 
@@ -421,6 +475,12 @@ func (tailSvc *tailScaleService) RunSSH(run bool) error {
 
 	if err != nil {
 		log.Println(err)
+	}
+
+	if run {
+		Notify("SSH access has been enabled.")
+	} else {
+		Notify("SSH access has been disabled.")
 	}
 
 	return nil
@@ -566,6 +626,8 @@ func (tailSvc *tailScaleService) SwitchTo(account string) {
 	}
 
 	tailSvc.client.SwitchProfile(tailSvc.ctx, all[0].ID)
+
+	Notify("Switched to account: %s", account)
 }
 
 func (tailSvc *tailScaleService) GetStatus() bool {
@@ -598,6 +660,8 @@ func (tailSvc *tailScaleService) UpdateStatus(previousOnlineStatus bool) bool {
 		tailSvc.traySvc.setStatus(online)
 		runtime.EventsEmit(tailSvc.ctx, "tailscale:status-changed", online)
 	}
+
+	tailSvc.traySvc.ToggleStatusItem(online)
 
 	return online
 }

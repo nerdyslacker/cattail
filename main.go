@@ -62,7 +62,7 @@ func main() {
 		OnDomReady: func(ctx context.Context) {
 			x, y := prefSvc.GetWindowPosition(ctx)
 			runtime2.WindowSetPosition(ctx, x, y)
-			runtime2.WindowShow(ctx)
+			// runtime2.WindowShow(ctx)
 		},
 		OnBeforeClose: func(ctx context.Context) (prevent bool) {
 			x, y := runtime2.WindowGetPosition(ctx)

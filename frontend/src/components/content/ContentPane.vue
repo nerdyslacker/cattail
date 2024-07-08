@@ -69,7 +69,7 @@ const columns = [
 const data = ref(files)
 const dataTableInstRef = ref(null)
  
-const selected_peer = reactive(computed(() => tailScaleStore.selectedPeer))
+const selected_peer = computed(() => tailScaleStore.selectedPeer)
 
 const onToggleSetExitNode = async (event) => {
   await tailScaleStore.setExitNode(event);

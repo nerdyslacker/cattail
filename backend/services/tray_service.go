@@ -1,11 +1,9 @@
 package services
 
 import (
-	"context"
 	_ "embed"
 
 	"github.com/energye/systray"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 var (
@@ -24,6 +22,7 @@ func trayIcon(isOnline bool) []byte {
 }
 
 type trayService struct {
+	statusMenuItem *systray.MenuItem
 	showMenuItem   *systray.MenuItem
 	quitMenuItem   *systray.MenuItem
 	isWindowHidden bool
@@ -33,14 +32,17 @@ func TrayService(isOnline bool) *trayService {
 	systray.SetIcon(trayIcon(isOnline))
 	systray.SetTitle("Cattail")
 
+	status := systray.AddMenuItem("", "")
+	systray.AddSeparator()
 	show := systray.AddMenuItem("Show", "")
 	systray.AddSeparator()
 	quit := systray.AddMenuItem("Quit", "")
 
 	return &trayService{
+		statusMenuItem: status,
 		showMenuItem:   show,
 		quitMenuItem:   quit,
-		isWindowHidden: false,
+		isWindowHidden: true,
 	}
 }
 
@@ -66,26 +68,14 @@ func (ts *trayService) Stop() {
 	}
 }
 
-func (ts *trayService) SetActions(ctx context.Context) {
-	ts.showMenuItem.Click(func() {
-		runtime.WindowShow(ctx)
-		ts.isWindowHidden = false
-	})
-
-	ts.quitMenuItem.Click(func() {
-		ts.Stop()
-		runtime.Quit(ctx)
-	})
-
-	systray.SetOnClick(func(menu systray.IMenu) {
-		if ts.isWindowHidden {
-			runtime.WindowShow(ctx)
-			ts.isWindowHidden = false
-		} else {
-			runtime.WindowHide(ctx)
-			ts.isWindowHidden = true
-		}
-	})
+func (ts *trayService) ToggleStatusItem(enabled bool) {
+	if enabled {
+		ts.statusMenuItem.Check()
+		ts.statusMenuItem.SetTitle("Stop")
+	} else {
+		ts.statusMenuItem.Uncheck()
+		ts.statusMenuItem.SetTitle("Start")
+	}
 }
 
 func (ts *trayService) setStatus(isOnline bool) {
