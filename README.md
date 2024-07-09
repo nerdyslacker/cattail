@@ -3,13 +3,17 @@
 </div>
 <h1 align="center">Cattail</h1>
 
+<div align="center">
+
 [![License](https://img.shields.io/github/license/nerdyslacker/cattail)](https://github.com/nerdyslacker/cattail/blob/main/LICENSE)
 [![GitHub release](https://img.shields.io/github/release/nerdyslacker/cattail)](https://github.com/nerdyslacker/cattail/releases)
 ![GitHub All Releases](https://img.shields.io/github/downloads/nerdyslacker/cattail/total)
 [![GitHub stars](https://img.shields.io/github/stars/nerdyslacker/cattail)](https://github.com/nerdyslacker/cattail/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/nerdyslacker/cattail)](https://github.com/nerdyslacker/cattail/fork)
 
-<strong>Cattail is an unofficial tailscale/headscale client for Linux developed using [Wails](https://wails.io) project.</strong>
+<strong>Cattail is tailscale/headscale client for Linux developed using [Wails](https://wails.io) project and [Naive UI](https://www.naiveui.com) library.</strong>
+
+</div>
 
 > :warning: This application is an independent project and is not affiliated with the official Tailscale project. Use it at your own risk. The developers are not responsible for any issues or damages that may arise from using this application.
 
