@@ -45,17 +45,20 @@
 
 # Installation
 
+Download the binary from [Releases](https://github.com/nerdyslacker/cattail/releases) page.
+
+If you want to build and install on your system execute this script:
+
 ```bash
-go install github.com/wailsapp/wails/v2/cmd/wails@latest
-git clone https://github.com/nerdyslacker/cattail
-cd cattail
-make install
+chmod +x install.sh
+./install.sh
 ```
 
-or download the binary from [Releases](https://github.com/nerdyslacker/cattail/releases) page.
+and to build in docker container (all dependencies installed) then install on your system just run:
 
-
-
+```bash
+make
+```
 
 # Credits 
 
