@@ -2,6 +2,9 @@ package services
 
 import (
 	_ "embed"
+	"runtime"
+
+	"cattail/backend/utils/trayicons"
 
 	"github.com/energye/systray"
 )
@@ -14,13 +17,6 @@ var (
 	iconInactive []byte
 )
 
-func trayIcon(isOnline bool) []byte {
-	if isOnline {
-		return iconActive
-	}
-	return iconInactive
-}
-
 type trayService struct {
 	statusMenuItem *systray.MenuItem
 	showMenuItem   *systray.MenuItem
@@ -29,8 +25,11 @@ type trayService struct {
 }
 
 func TrayService(isOnline bool) *trayService {
-	systray.SetIcon(trayIcon(isOnline))
+	trayIcon := trayIcon(isOnline)
+	systray.SetTemplateIcon(trayIcon, trayIcon)
+	systray.SetIcon(trayIcon)
 	systray.SetTitle("Cattail")
+	systray.SetTooltip("Cattail")
 
 	show := systray.AddMenuItem("Show", "")
 	systray.AddSeparator()
@@ -79,5 +78,20 @@ func (ts *trayService) ToggleStatusItem(enabled bool) {
 }
 
 func (ts *trayService) setStatus(isOnline bool) {
-	systray.SetIcon(trayIcon(isOnline))
+	trayIcon := trayIcon(isOnline)
+	systray.SetTemplateIcon(trayIcon, trayIcon)
+	systray.SetIcon(trayIcon)
+}
+
+func trayIcon(isOnline bool) []byte {
+	if runtime.GOOS == "windows" {
+		iconActive = trayicons.Active
+		iconInactive = trayicons.Inactive
+	}
+
+	if isOnline {
+		return iconActive
+	}
+
+	return iconInactive
 }

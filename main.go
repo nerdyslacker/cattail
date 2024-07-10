@@ -74,6 +74,10 @@ func main() {
 			prefSvc.SaveWindowPosition(x, y)
 			return false
 		},
+		SingleInstanceLock: &options.SingleInstanceLock{
+			UniqueId:               "db1301ad-7f4f-4814-a513-f068c93a617b",
+			OnSecondInstanceLaunch: tailSvc.OnSecondInstanceLaunch,
+		},
 		Bind: []interface{}{
 			sysSvc,
 			prefSvc,

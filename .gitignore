@@ -10,3 +10,4 @@ jspm_packages/
 .npm
 wailsjs
 dist
+frontend/package.json.md5
