@@ -8,7 +8,6 @@ require (
 	github.com/dgrr/tl v0.2.1
 	github.com/energye/systray v1.0.2
 	github.com/gen2brain/beeep v0.0.0-20240516210008-9c006672e7f4
-	github.com/sergeymakinen/go-ico v1.0.0-beta.0
 	github.com/vrischmann/userdir v0.0.0-20151206171402-20f291cebd68
 	github.com/wailsapp/wails/v2 v2.8.0
 	golang.design/x/clipboard v0.7.0
@@ -58,7 +57,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/samber/lo v1.38.1 // indirect
-	github.com/sergeymakinen/go-bmp v1.0.0 // indirect
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
 	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af // indirect
 	github.com/tailscale/go-winio v0.0.0-20231025203758-c4f33415bf55 // indirect

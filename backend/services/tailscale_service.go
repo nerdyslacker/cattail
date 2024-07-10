@@ -92,7 +92,6 @@ func (tailSvc *tailScaleService) initTray() {
 		tailSvc.traySvc = TrayService(online)
 	}
 
-	//tailSvc.traySvc.SetActions(tailSvc.ctx)
 	tailSvc.setTrayActions()
 }
 
