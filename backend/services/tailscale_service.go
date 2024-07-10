@@ -18,6 +18,7 @@ import (
 	"github.com/dgrr/tl"
 	"github.com/energye/systray"
 	"github.com/gen2brain/beeep"
+	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.design/x/clipboard"
 	"tailscale.com/client/tailscale"
@@ -83,6 +84,14 @@ func (tailSvc *tailScaleService) Startup(ctx context.Context) {
 
 	// Refresh status
 	tailSvc.Refresh()
+}
+
+func (tailSvc *tailScaleService) OnSecondInstanceLaunch(secondInstanceData options.SecondInstanceData) {
+	secondInstanceArgs := secondInstanceData.Args
+
+	runtime.WindowUnminimise(tailSvc.ctx)
+	runtime.Show(tailSvc.ctx)
+	go runtime.EventsEmit(tailSvc.ctx, "launchArgs", secondInstanceArgs)
 }
 
 func (tailSvc *tailScaleService) initTray() {

@@ -1,9 +1,20 @@
 package services
 
 import (
+	_ "embed"
+	"runtime"
+
 	"cattail/backend/utils/trayicons"
 
 	"github.com/energye/systray"
+)
+
+var (
+	//go:embed trayicons/active.png
+	iconActive []byte
+
+	//go:embed trayicons/inactive.png
+	iconInactive []byte
 )
 
 type trayService struct {
@@ -73,9 +84,14 @@ func (ts *trayService) setStatus(isOnline bool) {
 }
 
 func trayIcon(isOnline bool) []byte {
-	if isOnline {
-		return trayicons.Active
+	if runtime.GOOS == "windows" {
+		iconActive = trayicons.Active
+		iconInactive = trayicons.Inactive
 	}
 
-	return trayicons.Inactive
+	if isOnline {
+		return iconActive
+	}
+
+	return iconInactive
 }
