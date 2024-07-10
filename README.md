@@ -11,7 +11,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/nerdyslacker/cattail)](https://github.com/nerdyslacker/cattail/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/nerdyslacker/cattail)](https://github.com/nerdyslacker/cattail/fork)
 
-<strong>Cattail is tailscale/headscale client for Linux developed using [Wails](https://wails.io) project and [Naive UI](https://www.naiveui.com) library.</strong>
+<strong>Cattail is tailscale/headscale client for Linux and Windows developed using [Wails](https://wails.io) project and [Naive UI](https://www.naiveui.com) library.</strong>
 
 </div>
 
