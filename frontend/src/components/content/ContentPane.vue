@@ -3,7 +3,7 @@ import { h, computed, ref, reactive } from 'vue'
 import { useThemeVars, NButton } from 'naive-ui'
 const themeVars = useThemeVars()
 import useTailScaleStore from '../../stores/tailscale.js'
-import { CopyRegular } from '@vicons/fa'
+import { CopyRegular, Plus, TrashAlt } from '@vicons/fa'
 const tailScaleStore = useTailScaleStore()
 
 const accountOptions = computed(() => tailScaleStore.otherAccounts.map(acc => {
@@ -95,6 +95,43 @@ const onToggleRunSSH = async (checked) => {
   await tailScaleStore.runSSH(checked);
   selected_peer.value.run_ssh = checked;
 }
+
+const showModalRef = ref(false);
+const showModal = showModalRef;
+const routes = ref([...new Set(selected_peer?.value?.advertised_routes || [])]);
+const routeValue = ref(null);
+
+const onClickAdvertiseRoutes = async () => {
+  if (routeValue.value) {
+    const newRoutes = routeValue.value
+      .split(',')
+      .map((route) => route.trim())
+      .filter((route) => route !== '');
+
+    newRoutes.forEach((route) => {
+      if (!routes.value.includes(route)) {
+        routes.value.push(route);
+      }
+    });
+  }
+  
+  await tailScaleStore.advertiseRoutes(routes.value.join(','));
+  selected_peer.value.advertised_routes = [...new Set(routes.value)];
+
+  showModalRef.value = false;
+  routeValue.value = null;
+}
+
+const onClickRemoveRoute = async (route) => {
+  routes.value = routes.value.filter((r) => r !== route);
+  await tailScaleStore.advertiseRoutes(routes.value.join(','));
+  selected_peer.value.advertised_routes = [...new Set(routes.value)];
+}
+
+const onModalCancel = () => {
+  showModalRef.value = false
+};
+
 </script>
 
 <template>
@@ -105,7 +142,7 @@ const onToggleRunSSH = async (checked) => {
         <n-scrollbar style="max-height: 650px;">
           <n-space v-if="selected_peer != null" vertical style="padding-left: 10px; padding-right: 10px;">
             <n-card title="Information" size="small">
-              <n-list hoverable clickable>
+              <n-list hoverable>
                 <n-list-item>
                   <template #prefix>
                     <n-tag>Hostname </n-tag>
@@ -231,7 +268,7 @@ const onToggleRunSSH = async (checked) => {
               </n-space>
             </n-card>
             <n-card title="Options" size="small">
-              <n-list hoverable clickable>
+              <n-list hoverable>
                 <n-list-item v-if="selected_peer.dns_name !== tailScaleStore.self.dns_name">
                   <template #prefix>
                     <n-tag>Use exit node</n-tag>
@@ -273,6 +310,39 @@ const onToggleRunSSH = async (checked) => {
                   <n-thing style="text-align: right;">
                     <n-switch size="large" @update:value="onToggleRunSSH" :value="selected_peer.run_ssh" />
                   </n-thing>
+                </n-list-item>
+              </n-list>
+            </n-card>
+            <n-card title="Advertised Routes" size="small">
+              <template #header-extra v-if="selected_peer.dns_name === tailScaleStore.self.dns_name">
+                <n-button @click="showModal = true">
+                   <n-icon :component="Plus" size="16" :depth="1" />
+                </n-button>
+                <n-modal
+                  v-model:show="showModal"
+                  :mask-closable="false"
+                  preset="dialog"
+                  :show-icon="false"
+                  title="Add IP"
+                  positive-text="Add"
+                  negative-text="Cancel"
+                  @positive-click="onClickAdvertiseRoutes"
+                  @negative-click="onModalCancel"
+                >
+                  <n-input v-model:value="routeValue" type="text" placeholder="IP prefix to advertise" />
+                </n-modal>
+              </template>
+              <n-list hoverable>
+                <n-list-item v-for="route in selected_peer.advertised_routes">
+                  {{ route }}
+                  <template #suffix v-if="selected_peer.dns_name === tailScaleStore.self.dns_name">
+                    <n-button @click="onClickRemoveRoute(route)">
+                      <n-icon :component="TrashAlt" size="16" :depth="1" />
+                    </n-button>
+                  </template>
+                </n-list-item>
+                <n-list-item v-if="selected_peer.advertised_routes == null || selected_peer.advertised_routes?.length === 0">
+                  <p style="text-align: center;">No advertised routes</p>
                 </n-list-item>
               </n-list>
             </n-card>
