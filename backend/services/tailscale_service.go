@@ -658,6 +658,7 @@ func (tailSvc *tailScaleService) SwitchTo(account string) {
 		return
 	}
 
+	log.Printf("Profile %s", all[0].ID)
 	tailSvc.client.SwitchProfile(tailSvc.ctx, all[0].ID)
 
 	Notify("Switched to account: %s", account)
@@ -803,14 +804,7 @@ func (tailSvc *tailScaleService) watchIPN() {
 				break
 			}
 
-			waiting, err := tailSvc.client.AwaitWaitingFiles(tailSvc.ctx, 0)
-
-			if err != nil {
-				log.Printf("Waiting Files: %s\n", err)
-				break
-			}
-
-			if waiting != nil { // not.FilesWaiting 
+			if not.FilesWaiting != nil {	
 				tailSvc.fileMod <- struct{}{}
 			}
 
