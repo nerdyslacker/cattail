@@ -28,6 +28,7 @@ import (
 	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/net/tsaddr"
 	"tailscale.com/tailcfg"
+	"tailscale.com/taildrop"
 	"tailscale.com/types/key"
 )
 
@@ -589,6 +590,12 @@ func (tailSvc *tailScaleService) Self() types.Peer {
 func (tailSvc *tailScaleService) Files() []types.File {
 	files, err := tailSvc.client.AwaitWaitingFiles(tailSvc.ctx, time.Second)
 	if err != nil {
+		if strings.Contains(err.Error(), taildrop.ErrNoTaildrop.Error()) {
+			return nil
+		}
+		if tailSvc.ctx.Err() != nil {
+			return nil
+		}
 		log.Println(err)
 		return nil
 	}
@@ -725,7 +732,7 @@ func (tailSvc *tailScaleService) Start() error {
 		}
 
 		if result == "Yes" {
-			runtime.BrowserOpenURL(tailSvc.ctx, status.Status.AuthURL)
+			 tailSvc.handleTailscaleLogin()
 		}
 
 		return nil
@@ -773,7 +780,15 @@ func (tailSvc *tailScaleService) watchFiles() {
 
 		files, err := tailSvc.client.AwaitWaitingFiles(tailSvc.ctx, time.Second)
 		if err != nil {
-			log.Println(err)
+			if strings.Contains(err.Error(), taildrop.ErrNoTaildrop.Error()) {
+				return
+			}
+
+			if tailSvc.ctx.Err() != nil {
+				return
+			}
+			
+		    log.Println(err)
 		}
 
 		if len(files) != prevFiles {
@@ -820,6 +835,54 @@ func (tailSvc *tailScaleService) watchIPN() {
 
 			log.Printf("IPN bus update: %v\n", not)
 		}
+	}
+}
+
+func (tailSvc *tailScaleService) handleTailscaleLogin() error {
+	// Use a channel to coordinate login and URL retrieval
+	authURLChan := make(chan string, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		err := cli.Run([]string{"login"})
+		if err != nil {
+			errChan <- err
+			return
+		}
+	}()
+
+	go func() {
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+
+		timeout := time.After(30 * time.Second)
+
+		for {
+			select {
+			case <-timeout:
+				errChan <- fmt.Errorf("tailscale login timeout")
+				return
+			case <-ticker.C:
+				st, err := tailSvc.client.Status(tailSvc.ctx)
+				if err != nil {
+					errChan <- err
+					return
+				}
+
+				if st.AuthURL != "" {
+					authURLChan <- st.AuthURL
+					return
+				}
+			}
+		}
+	}()
+
+	select {
+	case authURL := <-authURLChan:
+		runtime.BrowserOpenURL(tailSvc.ctx, authURL)
+		return nil
+	case err := <-errChan:
+		return err
 	}
 }
 
