@@ -17,7 +17,7 @@ const handleAccountSelect = (key) => {
   tailScaleStore.switchAccount(key)
 }
 
-const files = computed(() => tailScaleStore.files.map(file => {
+const files = computed(() => tailScaleStore.files && tailScaleStore.files.map(file => {
   return {
     filename: file.name,
     size: tailScaleStore.humanFileSize(file.size)
@@ -353,7 +353,7 @@ const onModalCancel = () => {
           </n-space>
         </n-scrollbar>
       </n-tab-pane>
-      <n-tab-pane name="files" :tab="`Files (${files.length})`">
+      <n-tab-pane name="files" :tab="`Files (${files && files.length})`">
         <n-scrollbar style="max-height: 670px;">
           <n-space vertical style="padding-left: 10px; padding-right: 10px;">
             <n-data-table ref="dataTableInstRef" :columns="columns" :data="data" />
