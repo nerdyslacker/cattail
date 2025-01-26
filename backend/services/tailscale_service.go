@@ -28,6 +28,7 @@ import (
 	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/net/tsaddr"
 	"tailscale.com/tailcfg"
+	"tailscale.com/taildrop"
 	"tailscale.com/types/key"
 )
 
@@ -69,7 +70,7 @@ func (tailSvc *tailScaleService) Startup(ctx context.Context) {
 	tailSvc.ctx = ctx
 	tailSvc.fileMod = make(chan struct{}, 1)
 
-	Notify("Cattail started")
+	Notify("Tailscale started")
 
 	go tailSvc.watchFiles()
 	go tailSvc.watchIPN()
@@ -402,7 +403,7 @@ func (tailSvc *tailScaleService) AdvertiseExitNode(dnsName string) {
 	}
 }
 
-func (tailSvc *tailScaleService) AdvertiseRoutes(routes []netip.Prefix) error {
+func (tailSvc *tailScaleService) AdvertiseRoutes(routes string) error {
 	curPrefs, err := tailSvc.client.GetPrefs(tailSvc.ctx)
 
 	if err != nil {
@@ -410,7 +411,26 @@ func (tailSvc *tailScaleService) AdvertiseRoutes(routes []netip.Prefix) error {
 	}
 
 	exit := curPrefs.AdvertisesExitNode()
-	curPrefs.AdvertiseRoutes = routes
+
+	
+	if strings.TrimSpace(routes) == "" {
+		curPrefs.AdvertiseRoutes = nil
+	} else {
+		ipStrings := strings.Split(routes, ",")
+		var prefixes []netip.Prefix
+		for _, ipStr := range ipStrings {
+			ipStr = strings.TrimSpace(ipStr)
+			prefix, err := netip.ParsePrefix(ipStr)
+			if err != nil {
+				log.Println(err)
+				return nil
+			}
+			prefixes = append(prefixes, prefix)
+		}
+
+		curPrefs.AdvertiseRoutes = prefixes
+	}
+
 	curPrefs.SetAdvertiseExitNode(exit)
 
 	_, err = tailSvc.client.EditPrefs(tailSvc.ctx, &ipn.MaskedPrefs{
@@ -551,13 +571,13 @@ func (tailSvc *tailScaleService) Self() types.Peer {
 		return types.Peer{}
 	}
 
-	self := status.Self
-	peer := convertPeer(self)
-
 	curPrefs, err := tailSvc.client.GetPrefs(tailSvc.ctx)
 	if err != nil {
 		panic(err)
 	}
+
+	self := status.Self
+	peer := convertPeer(self, curPrefs)
 
 	peer.ExitNodeOption = curPrefs.AdvertisesExitNode()
 	peer.AllowLANAccess = curPrefs.ExitNodeAllowLANAccess
@@ -570,6 +590,12 @@ func (tailSvc *tailScaleService) Self() types.Peer {
 func (tailSvc *tailScaleService) Files() []types.File {
 	files, err := tailSvc.client.AwaitWaitingFiles(tailSvc.ctx, time.Second)
 	if err != nil {
+		if strings.Contains(err.Error(), taildrop.ErrNoTaildrop.Error()) {
+			return nil
+		}
+		if tailSvc.ctx.Err() != nil {
+			return nil
+		}
 		log.Println(err)
 		return nil
 	}
@@ -589,13 +615,19 @@ func (tailSvc *tailScaleService) Namespaces() []types.Namespace {
 		return nil
 	}
 
+	curPrefs, err := tailSvc.client.GetPrefs(tailSvc.ctx)
+
+	if err != nil {
+		panic(err)
+	}
+
 	res := make([]types.Namespace, 0)
 
 	for _, nodeKey := range status.Peers() {
 		tsPeer := status.Peer[nodeKey]
 		_, namespace := splitPeerNamespace(tsPeer.DNSName)
 
-		peer := convertPeer(tsPeer)
+		peer := convertPeer(tsPeer, curPrefs)
 
 		i := tl.SearchFn(res, func(a types.Namespace) bool {
 			return namespace == a.Name
@@ -633,6 +665,7 @@ func (tailSvc *tailScaleService) SwitchTo(account string) {
 		return
 	}
 
+	log.Printf("Profile %s", all[0].ID)
 	tailSvc.client.SwitchProfile(tailSvc.ctx, all[0].ID)
 
 	Notify("Switched to account: %s", account)
@@ -674,20 +707,49 @@ func (tailSvc *tailScaleService) UpdateStatus(previousOnlineStatus bool) bool {
 	return online
 }
 
-// Start connects the local peer to the Tailscale network.
 func (tailSvc *tailScaleService) Start() error {
+	st, err := tailSvc.client.Status(tailSvc.ctx)
+
+	if err != nil {
+		return err
+	}
+
+	status := &tsutils.Status{
+		Status: st,
+	}
+
+	if status.NeedsLogin() {
+		result, err := runtime.MessageDialog(tailSvc.ctx, runtime.MessageDialogOptions{
+			Type:          runtime.QuestionDialog,
+			Title:         "Login Required",
+			Message:       "Open a browser to authenticate with Tailscale?",
+			DefaultButton: "Yes",
+			CancelButton:  "No",
+		})
+
+		if err != nil {
+			return err
+		}
+
+		if result == "Yes" {
+			 tailSvc.handleTailscaleLogin()
+		}
+
+		return nil
+	}
+
+	Notify("Tailscale started")
 	return cli.Run([]string{"up"})
 }
 
-// Stop disconnects the local peer from the Tailscale network.
 func (tailSvc *tailScaleService) Stop() error {
+	Notify("Tailscale stopped")
 	return cli.Run([]string{"down"})
 }
 
 func (tailSvc *tailScaleService) Refresh() {
 	var previousStatus bool
 
-	// Start a goroutine for polling
 	go func() {
 		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
@@ -695,14 +757,12 @@ func (tailSvc *tailScaleService) Refresh() {
 		for {
 			select {
 			case <-ticker.C:
-				// Call UpdateStatus and update previousStatus
 				currentStatus := tailSvc.UpdateStatus(previousStatus)
 				previousStatus = currentStatus
 				runtime.EventsOn(tailSvc.ctx, "wails:window:hide", func(optionalData ...interface{}) {
 					tailSvc.traySvc.isWindowHidden = true
 				})
 			case <-tailSvc.ctx.Done():
-				// Stop polling when the context is cancelled
 				return
 			}
 		}
@@ -720,7 +780,15 @@ func (tailSvc *tailScaleService) watchFiles() {
 
 		files, err := tailSvc.client.AwaitWaitingFiles(tailSvc.ctx, time.Second)
 		if err != nil {
-			log.Println(err)
+			if strings.Contains(err.Error(), taildrop.ErrNoTaildrop.Error()) {
+				return
+			}
+
+			if tailSvc.ctx.Err() != nil {
+				return
+			}
+			
+		    log.Println(err)
 		}
 
 		if len(files) != prevFiles {
@@ -751,7 +819,7 @@ func (tailSvc *tailScaleService) watchIPN() {
 				break
 			}
 
-			if not.FilesWaiting != nil {
+			if not.FilesWaiting != nil {	
 				tailSvc.fileMod <- struct{}{}
 			}
 
@@ -770,7 +838,55 @@ func (tailSvc *tailScaleService) watchIPN() {
 	}
 }
 
-func convertPeer(status *ipnstate.PeerStatus) types.Peer {
+func (tailSvc *tailScaleService) handleTailscaleLogin() error {
+	// Use a channel to coordinate login and URL retrieval
+	authURLChan := make(chan string, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		err := cli.Run([]string{"login"})
+		if err != nil {
+			errChan <- err
+			return
+		}
+	}()
+
+	go func() {
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+
+		timeout := time.After(30 * time.Second)
+
+		for {
+			select {
+			case <-timeout:
+				errChan <- fmt.Errorf("tailscale login timeout")
+				return
+			case <-ticker.C:
+				st, err := tailSvc.client.Status(tailSvc.ctx)
+				if err != nil {
+					errChan <- err
+					return
+				}
+
+				if st.AuthURL != "" {
+					authURLChan <- st.AuthURL
+					return
+				}
+			}
+		}
+	}()
+
+	select {
+	case authURL := <-authURLChan:
+		runtime.BrowserOpenURL(tailSvc.ctx, authURL)
+		return nil
+	case err := <-errChan:
+		return err
+	}
+}
+
+func convertPeer(status *ipnstate.PeerStatus, prefs *ipn.Prefs) types.Peer {
 	peerName, _ := splitPeerNamespace(status.DNSName)
 	return types.Peer{
 		ID:             string(status.ID),
@@ -796,6 +912,24 @@ func convertPeer(status *ipnstate.PeerStatus) types.Peer {
 		IPs: tl.Map(status.TailscaleIPs, func(ip netip.Addr) string {
 			return ip.String()
 		}),
+		AllowedIPs: func() []string {
+			if status.AllowedIPs == nil {
+				return nil
+			}
+
+			return tl.Map(status.AllowedIPs.AsSlice(), func(prefix netip.Prefix) string {
+				return prefix.String()
+			})
+		}(),
+		AdvertisedRoutes: func() []string {
+			if prefs.AdvertiseRoutes == nil {
+				return nil
+			}
+
+			return tl.Map(prefs.AdvertiseRoutes, func(prefix netip.Prefix) string {
+				return prefix.String()
+			})
+		}(),
 	}
 }
 

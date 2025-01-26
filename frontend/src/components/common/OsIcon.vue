@@ -38,7 +38,7 @@ const iconComponent = computed(() => {
         case 'windows':
             return Windows
         case 'apple':
-        case 'mac':
+        case 'macos':
         case 'ios':
             return Apple
         case 'android':

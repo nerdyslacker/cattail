@@ -76,7 +76,6 @@ const useTailScaleStore = defineStore('tailScaleStore', {
             await SwitchTo(name)
         },
         async setExitNode(event) {
-            console.log('setting exit node')
             event.target.disabled = true
             EventsOnce('exit_node_connect', () => {
                 event.target.disabled = false
@@ -84,7 +83,6 @@ const useTailScaleStore = defineStore('tailScaleStore', {
             await SetExitNode(this.selectedPeer.dns_name)
         },
         async advertiseExitNode(event) {
-            console.log('advertising exit node')
             event.target.disabled = true
             EventsOnce('advertise_exit_node_done', async () => {
                 event.target.disabled = false
@@ -92,7 +90,7 @@ const useTailScaleStore = defineStore('tailScaleStore', {
             })
             await AdvertiseExitNode(this.selectedPeer.dns_name)
         },
-        async adverstiseRoutes(routes) {
+        async advertiseRoutes(routes) {
             await AdvertiseRoutes(routes)
         }, 
         async allowLANAccess(allow) {

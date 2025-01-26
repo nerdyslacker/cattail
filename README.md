@@ -34,12 +34,12 @@
 - [x] Allow LAN access
 - [x] Accept routes
 - [x] Run SSH
-- [ ] Advertise routes
+- [x] Advertise routes
 - [x] Toggle tailscale status
 - [ ] Toggle taildrop status and change path
 - [x] Sending files
 - [x] Receiving files
-- [ ] Notification on tailscale status change
+- [x] Notification on tailscale status change
 - [ ] Notification on peer addition/removal
 - [ ] Monitoring traffic
 

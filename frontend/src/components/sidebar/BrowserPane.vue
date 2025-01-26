@@ -42,7 +42,7 @@ const namespaces = computed(() => {
     <div class="nav-pane-container flex-box-v">
         <div>
             <n-list v-if="tailScaleStore.self != null" bordered hoverable clickable>
-                <n-list-item>
+                <n-list-item @click="tailScaleStore.selectedPeer = tailScaleStore.self">
                     <template #prefix>
                         <n-tag :bordered="false" type="info">
                             <os-icon :name="tailScaleStore.self.os" size="16" />
@@ -51,7 +51,7 @@ const namespaces = computed(() => {
                     <template #suffix>
 
                     </template>
-                    <n-thing @click="tailScaleStore.selectedPeer = tailScaleStore.self">
+                    <n-thing>
                         <n-flex>
                             {{ tailScaleStore.self.name }}
                             <n-tag size="small" round>

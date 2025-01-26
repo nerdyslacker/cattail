@@ -17,7 +17,7 @@ func (s Status) Online() bool {
 	return (s.Status != nil) && (s.Status.BackendState == ipn.Running.String())
 }
 
-func (s Status) NeedsAuth() bool {
+func (s Status) NeedsLogin() bool {
 	return (s.Status != nil) && (s.Status.BackendState == ipn.NeedsLogin.String())
 }
 
