@@ -21,7 +21,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.design/x/clipboard"
-	"tailscale.com/client/tailscale"
+	"tailscale.com/client/local"
 	"tailscale.com/client/tailscale/apitype"
 	"tailscale.com/cmd/tailscale/cli"
 	"tailscale.com/ipn"
@@ -34,7 +34,7 @@ import (
 
 type tailScaleService struct {
 	ctx           context.Context
-	client        tailscale.LocalClient
+	client        local.Client
 	fileMod       chan struct{}
 	initClipboard sync.Once
 	traySvc       *trayService
