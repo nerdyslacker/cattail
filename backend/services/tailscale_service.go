@@ -21,20 +21,20 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.design/x/clipboard"
-	"tailscale.com/client/tailscale"
+	"tailscale.com/client/local"
 	"tailscale.com/client/tailscale/apitype"
 	"tailscale.com/cmd/tailscale/cli"
 	"tailscale.com/ipn"
 	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/net/tsaddr"
 	"tailscale.com/tailcfg"
-	"tailscale.com/taildrop"
+	"tailscale.com/feature/taildrop"
 	"tailscale.com/types/key"
 )
 
 type tailScaleService struct {
 	ctx           context.Context
-	client        tailscale.LocalClient
+	client        local.Client
 	fileMod       chan struct{}
 	initClipboard sync.Once
 	traySvc       *trayService
@@ -732,7 +732,7 @@ func (tailSvc *tailScaleService) Start() error {
 		}
 
 		if result == "Yes" {
-			 tailSvc.handleTailscaleLogin()
+			tailSvc.handleTailscaleLogin()
 		}
 
 		return nil
@@ -788,7 +788,7 @@ func (tailSvc *tailScaleService) watchFiles() {
 				return
 			}
 			
-		    log.Println(err)
+			log.Println(err)
 		}
 
 		if len(files) != prevFiles {
