@@ -155,8 +155,8 @@ const saveControlURL = async () => {
     <n-tabs default-value="general" type="line" placement="top" size="large"
       tab-style="padding-left: 10px; padding-right: 10px;" animated>
       <n-tab-pane name="general" tab="General">
-        <n-scrollbar style="max-height: 650px;">
-          <n-space v-if="selected_peer != null" vertical style="padding-left: 10px; padding-right: 10px;">
+        <n-scrollbar>
+          <n-space v-if="selected_peer != null" vertical style="padding: 0 10px 25px 10px;">
             <n-card title="Information" size="small">
               <n-list hoverable>
                 <n-list-item>
@@ -370,14 +370,14 @@ const saveControlURL = async () => {
         </n-scrollbar>
       </n-tab-pane>
       <n-tab-pane name="files" :tab="`Files (${files && files.length})`">
-        <n-scrollbar style="max-height: 670px;">
+        <n-scrollbar>
           <n-space vertical style="padding-left: 10px; padding-right: 10px;">
             <n-data-table ref="dataTableInstRef" :columns="columns" :data="data" />
           </n-space>
         </n-scrollbar>
       </n-tab-pane>
       <n-tab-pane name="settings" tab="Settings">
-        <n-scrollbar style="max-height: 650px;">
+        <n-scrollbar>
           <n-space vertical style="padding: 10px;">
             <n-card title="Control URL" size="small">
               <n-space vertical>
@@ -415,10 +415,23 @@ const saveControlURL = async () => {
 @import '@/styles/content';
 
 .content-container {
-  //padding: 5px 5px 0;
-  //padding-top: 0;
   box-sizing: border-box;
   background-color: v-bind('themeVars.tabColor');
+
+  :deep(.n-tabs) {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  :deep(.n-tabs-content) {
+    flex: 1;
+    min-height: 0;
+  }
+
+  :deep(.n-tab-pane) {
+    height: 100%;
+  }
 }
 </style>
 

@@ -228,7 +228,8 @@ onMounted(async () => {
     }
 
     #app-content {
-        height: calc(100% - 60px);
+        flex: 1 1 0;
+        min-height: 0;
 
         .content-area {
             overflow: hidden;
