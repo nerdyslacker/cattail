@@ -1,7 +1,8 @@
 <script setup>
 import { h, computed, ref, reactive } from 'vue'
-import { useThemeVars, NButton } from 'naive-ui'
+import { useThemeVars, NButton, useMessage } from 'naive-ui'
 const themeVars = useThemeVars()
+const message = useMessage()
 import useTailScaleStore from '../../stores/tailscale.js'
 import { CopyRegular, Plus, TrashAlt } from '@vicons/fa'
 const tailScaleStore = useTailScaleStore()
@@ -131,6 +132,21 @@ const onClickRemoveRoute = async (route) => {
 const onModalCancel = () => {
   showModalRef.value = false
 };
+
+const controlURL = ref('')
+const savingURL = ref(false)
+
+const saveControlURL = async () => {
+  savingURL.value = true
+  try {
+    await tailScaleStore.setControlURL(controlURL.value.trim())
+    message.success('Control URL saved successfully')
+  } catch (e) {
+    message.error('Failed to save control URL: ' + e)
+  } finally {
+    savingURL.value = false
+  }
+}
 
 </script>
 
@@ -360,9 +376,25 @@ const onModalCancel = () => {
           </n-space>
         </n-scrollbar>
       </n-tab-pane>
-      <!-- <n-tab-pane name="preferences" tab="Preferences">
-        TODO
-      </n-tab-pane> -->
+      <n-tab-pane name="settings" tab="Settings">
+        <n-scrollbar style="max-height: 650px;">
+          <n-space vertical style="padding: 10px;">
+            <n-card title="Control URL" size="small">
+              <n-space vertical>
+                <n-input
+                  v-model:value="controlURL"
+                  type="text"
+                  placeholder="https://headscale.example.com"
+                  clearable
+                />
+                <n-button type="primary" @click="saveControlURL" :loading="savingURL">
+                  Save
+                </n-button>
+              </n-space>
+            </n-card>
+          </n-space>
+        </n-scrollbar>
+      </n-tab-pane>
       <template #suffix>
         <div style="padding-right: 10px;">
           <n-dropdown trigger="click" :options="accountOptions" @select="handleAccountSelect">

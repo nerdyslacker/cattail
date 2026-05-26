@@ -67,7 +67,9 @@ watch(
         :theme-overrides="prefStore.isDark ? darkThemeOverrides : themeOverrides"
         class="fill-height">
         <n-dialog-provider>
-            <app-content :loading="initializing" />
+            <n-message-provider>
+                <app-content :loading="initializing" />
+            </n-message-provider>
         </n-dialog-provider>
     </n-config-provider>
 </template>
