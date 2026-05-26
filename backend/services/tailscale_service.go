@@ -38,6 +38,8 @@ type tailScaleService struct {
 	fileMod       chan struct{}
 	initClipboard sync.Once
 	traySvc       *trayService
+	sshSessions   map[string]*sshSession
+	sshMu         sync.Mutex
 }
 
 func TailScaleService() *tailScaleService {
@@ -69,6 +71,7 @@ func Notify(format string, args ...interface{}) {
 func (tailSvc *tailScaleService) Startup(ctx context.Context) {
 	tailSvc.ctx = ctx
 	tailSvc.fileMod = make(chan struct{}, 1)
+	tailSvc.sshSessions = make(map[string]*sshSession)
 
 	Notify("Tailscale started")
 

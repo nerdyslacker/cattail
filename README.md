@@ -28,7 +28,7 @@
 - [x] Tray menu for quick access
 - [x] Copying of IP addresses/DNS name
 - [ ] Pinging of peers
-- [ ] Set control URL
+- [x] Set control URL
 - [ ] Adding tags
 - [x] Exit node management
 - [x] Allow LAN access
@@ -42,6 +42,7 @@
 - [x] Notification on tailscale status change
 - [ ] Notification on peer addition/removal
 - [ ] Monitoring traffic
+- [x] Tailscale and direct SSH options inside app
 
 # Installation
 
