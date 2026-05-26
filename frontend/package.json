@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "dayjs": "^1.11.13",
     "lodash": "^4.17.21",
     "pinia": "^2.3.1",

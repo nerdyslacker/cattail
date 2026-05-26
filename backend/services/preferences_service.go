@@ -142,6 +142,29 @@ func (p *preferencesService) SaveWindowPosition(x, y int) {
 	}
 }
 
+func (p *preferencesService) GetSSHCredential(deviceKey string) (resp types.JSResp) {
+	data := p.pref.GetPreferences()
+	if cred, ok := data.SshCredentials[deviceKey]; ok {
+		resp.Data = cred
+	}
+	resp.Success = true
+	return
+}
+
+func (p *preferencesService) SaveSSHCredential(deviceKey string, cred types.SSHCredential) (resp types.JSResp) {
+	data := p.pref.GetPreferences()
+	if data.SshCredentials == nil {
+		data.SshCredentials = make(map[string]types.SSHCredential)
+	}
+	data.SshCredentials[deviceKey] = cred
+	if err := p.pref.SetPreferences(&data); err != nil {
+		resp.Msg = err.Error()
+		return
+	}
+	resp.Success = true
+	return
+}
+
 func (p *preferencesService) GetScanSize() int {
 	data := p.pref.GetPreferences()
 	size := data.General.ScanSize

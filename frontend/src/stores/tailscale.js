@@ -19,6 +19,9 @@ import {
     AcceptRoutes,
     RunSSH,
     SetControlURL,
+    ConnectTailscaleSSH,
+    ConnectDirectSSH,
+    CloseSSHSession,
     Start,
     Stop,
     GetStatus,
@@ -36,6 +39,7 @@ const useTailScaleStore = defineStore('tailScaleStore', {
         selectedPeer: null,
         appRunning: true,
         timer: null,
+        sshSessions: [],
     }),
     actions: {
         async load() {
@@ -150,6 +154,20 @@ const useTailScaleStore = defineStore('tailScaleStore', {
             } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1)
 
             return bytes.toFixed(dp) + ' ' + units[u]
+        },
+        async connectTailscaleSSH(peerName) {
+            const sessionId = await ConnectTailscaleSSH(peerName)
+            this.sshSessions.push({ id: sessionId, peerName })
+            return sessionId
+        },
+        async connectDirectSSH(host, port, username, password, keyPath) {
+            const sessionId = await ConnectDirectSSH(host, port, username, password, keyPath)
+            this.sshSessions.push({ id: sessionId, peerName: host })
+            return sessionId
+        },
+        async closeSSHSession(sessionId) {
+            await CloseSSHSession(sessionId)
+            this.sshSessions = this.sshSessions.filter(s => s.id !== sessionId)
         },
     },
 })

@@ -21,7 +21,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.design/x/clipboard"
-	"tailscale.com/client/tailscale"
+	"tailscale.com/client/local"
 	"tailscale.com/client/tailscale/apitype"
 	"tailscale.com/cmd/tailscale/cli"
 	"tailscale.com/ipn"
@@ -34,10 +34,12 @@ import (
 
 type tailScaleService struct {
 	ctx           context.Context
-	client        tailscale.LocalClient
+	client        local.Client
 	fileMod       chan struct{}
 	initClipboard sync.Once
 	traySvc       *trayService
+	sshSessions   map[string]*sshSession
+	sshMu         sync.Mutex
 }
 
 func TailScaleService() *tailScaleService {
@@ -69,6 +71,7 @@ func Notify(format string, args ...interface{}) {
 func (tailSvc *tailScaleService) Startup(ctx context.Context) {
 	tailSvc.ctx = ctx
 	tailSvc.fileMod = make(chan struct{}, 1)
+	tailSvc.sshSessions = make(map[string]*sshSession)
 
 	Notify("Tailscale started")
 

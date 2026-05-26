@@ -1,10 +1,13 @@
 <script setup>
-import { h, computed, ref, reactive } from 'vue'
-import { useThemeVars, NButton } from 'naive-ui'
+import { h, computed, ref, reactive, watch } from 'vue'
+import { useThemeVars, NButton, useMessage } from 'naive-ui'
 const themeVars = useThemeVars()
+const message = useMessage()
 import useTailScaleStore from '../../stores/tailscale.js'
-import { CopyRegular, Plus, TrashAlt } from '@vicons/fa'
+import { CopyRegular, Plus, TrashAlt, Terminal, Times } from '@vicons/fa'
 const tailScaleStore = useTailScaleStore()
+import SSHCredentialsDialog from './SSHCredentialsDialog.vue'
+import SSHTerminal from './SSHTerminal.vue'
 
 const accountOptions = computed(() => tailScaleStore.otherAccounts.map(acc => {
   return {
@@ -132,15 +135,66 @@ const onModalCancel = () => {
   showModalRef.value = false
 };
 
+const showSSHDialog = ref(false)
+const sshTargetPeer = ref(null)
+const activeTab = ref('general')
+const sshSubTab = ref(null)
+
+const openSSHDialog = () => {
+  sshTargetPeer.value = selected_peer.value
+  showSSHDialog.value = true
+}
+
+const onSSHConnected = (sessionId) => {
+  activeTab.value = 'ssh-sessions'
+  sshSubTab.value = sessionId
+}
+
+const closeSSHTab = (sessionId) => {
+  tailScaleStore.closeSSHSession(sessionId)
+  if (tailScaleStore.sshSessions.length === 0) {
+    sshSubTab.value = null
+  }
+}
+
+// Switch to General tab when clicking a different peer in sidebar
+watch(() => tailScaleStore.selectedPeer?.dns_name, (newDNS, oldDNS) => {
+  if (newDNS && newDNS !== oldDNS) {
+    activeTab.value = 'general'
+  }
+})
+
+const handleTabClose = (tabName) => {
+  if (tabName.startsWith('ssh-')) {
+    const sessionId = tabName.substring(4)
+    closeSSHTab(sessionId)
+  }
+}
+
+const controlURL = ref('')
+const savingURL = ref(false)
+
+const saveControlURL = async () => {
+  savingURL.value = true
+  try {
+    await tailScaleStore.setControlURL(controlURL.value.trim())
+    message.success('Control URL saved successfully')
+  } catch (e) {
+    message.error('Failed to save control URL: ' + e)
+  } finally {
+    savingURL.value = false
+  }
+}
+
 </script>
 
 <template>
   <div class="content-container flex-box-v">
-    <n-tabs default-value="general" type="line" placement="top" size="large"
-      tab-style="padding-left: 10px; padding-right: 10px;" animated>
+    <n-tabs v-model:value="activeTab" default-value="general" type="line" placement="top" size="large"
+      tab-style="padding-left: 10px; padding-right: 10px;" animated @close="handleTabClose">
       <n-tab-pane name="general" tab="General">
-        <n-scrollbar style="max-height: 650px;">
-          <n-space v-if="selected_peer != null" vertical style="padding-left: 10px; padding-right: 10px;">
+        <n-scrollbar>
+          <n-space v-if="selected_peer != null" vertical style="padding: 0 10px 25px 10px;">
             <n-card title="Information" size="small">
               <n-list hoverable>
                 <n-list-item>
@@ -264,6 +318,10 @@ const onModalCancel = () => {
                   <n-button size="large" @click="tailScaleStore.sendFile(selected_peer.dns_name)">
                     Send file
                   </n-button>
+                  <n-button size="large" @click="openSSHDialog">
+                    <template #icon><n-icon :component="Terminal" /></template>
+                    SSH
+                  </n-button>
                 </n-flex>
               </n-space>
             </n-card>
@@ -316,7 +374,7 @@ const onModalCancel = () => {
             <n-card title="Advertised Routes" size="small">
               <template #header-extra v-if="selected_peer.dns_name === tailScaleStore.self.dns_name">
                 <n-button @click="showModal = true">
-                   <n-icon :component="Plus" size="16" :depth="1" />
+                  <n-icon :component="Plus" size="16" :depth="1" />
                 </n-button>
                 <n-modal
                   v-model:show="showModal"
@@ -354,15 +412,68 @@ const onModalCancel = () => {
         </n-scrollbar>
       </n-tab-pane>
       <n-tab-pane name="files" :tab="`Files (${files && files.length})`">
-        <n-scrollbar style="max-height: 670px;">
+        <n-scrollbar>
           <n-space vertical style="padding-left: 10px; padding-right: 10px;">
             <n-data-table ref="dataTableInstRef" :columns="columns" :data="data" />
           </n-space>
         </n-scrollbar>
       </n-tab-pane>
-      <!-- <n-tab-pane name="preferences" tab="Preferences">
-        TODO
-      </n-tab-pane> -->
+      <n-tab-pane name="ssh-sessions" tab="SSH Sessions" class="content-sub-tab-pane" display-directive="show">
+        <div v-if="tailScaleStore.sshSessions.length === 0" class="ssh-empty">
+          <n-empty description="No active SSH sessions" />
+        </div>
+        <n-tabs
+          v-else
+          v-model:value="sshSubTab"
+          type="line"
+          animated
+          :default-value="tailScaleStore.sshSessions[0]?.id"
+          class="ssh-sub-tabs"
+        >
+          <n-tab-pane
+            v-for="session in tailScaleStore.sshSessions"
+            :key="session.id"
+            :name="session.id"
+            display-directive="show"
+          >
+            <template #tab>
+              <n-space align="center" :size="4" :wrap="false">
+                <span>{{ session.peerName }}</span>
+                <n-button text size="tiny" @click.stop="closeSSHTab(session.id)" style="padding: 0 4px">
+                  <n-icon :component="Times" size="12" />
+                </n-button>
+              </n-space>
+            </template>
+            <div style="padding: 4px; height: 100%; box-sizing: border-box;">
+              <SSHTerminal
+                :session-id="session.id"
+                :peer-name="session.peerName"
+                :active="sshSubTab === session.id"
+                @close="closeSSHTab(session.id)"
+              />
+            </div>
+          </n-tab-pane>
+        </n-tabs>
+      </n-tab-pane>
+      <n-tab-pane name="settings" tab="Settings">
+        <n-scrollbar>
+          <n-space vertical style="padding: 10px;">
+            <n-card title="Control URL" size="small">
+              <n-space vertical>
+                <n-input
+                  v-model:value="controlURL"
+                  type="text"
+                  placeholder="https://headscale.example.com"
+                  clearable
+                />
+                <n-button type="primary" @click="saveControlURL" :loading="savingURL">
+                  Save
+                </n-button>
+              </n-space>
+            </n-card>
+          </n-space>
+        </n-scrollbar>
+      </n-tab-pane>      
       <template #suffix>
         <div style="padding-right: 10px;">
           <n-dropdown trigger="click" :options="accountOptions" @select="handleAccountSelect">
@@ -376,6 +487,12 @@ const onModalCancel = () => {
         </div>
       </template>
     </n-tabs>
+    <SSHCredentialsDialog
+      v-model:show="showSSHDialog"
+      :peer-name="sshTargetPeer?.name || ''"
+      :peer-dns-name="sshTargetPeer?.dns_name || ''"
+      @connected="onSSHConnected"
+    />
   </div>
 </template>
 
@@ -383,10 +500,23 @@ const onModalCancel = () => {
 @import '@/styles/content';
 
 .content-container {
-  //padding: 5px 5px 0;
-  //padding-top: 0;
   box-sizing: border-box;
   background-color: v-bind('themeVars.tabColor');
+
+  :deep(.n-tabs) {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  :deep(.n-tabs-content) {
+    flex: 1;
+    min-height: 0;
+  }
+
+  :deep(.n-tab-pane) {
+    height: 100%;
+  }
 }
 </style>
 
@@ -401,6 +531,62 @@ const onModalCancel = () => {
   height: 100%;
   background-color: v-bind('themeVars.bodyColor');
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-sub-tab-pane > div {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ssh-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 25%;
+}
+
+.ssh-sub-tabs {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ssh-sub-tabs .n-tabs-nav {
+  --tab-gap: 0px;
+  gap: 0;
+}
+
+.ssh-sub-tabs .n-tabs-nav-scroll {
+  overflow: visible;
+  transform: none !important;
+}
+
+.ssh-sub-tabs .n-tabs-nav .n-tabs-tab {
+  margin-right: 0;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.ssh-sub-tabs .n-tabs-tab-pad {
+  display: none;
+}
+
+.ssh-sub-tabs .n-tabs-nav .n-tabs-tab:first-child {
+  margin-left: 0;
+}
+
+.ssh-sub-tabs .n-tabs-content {
+  flex: 1;
+  min-height: 0;
+}
+
+.ssh-sub-tabs .n-tab-pane {
+  height: 100%;
 }
 
 .n-tabs .n-tabs-bar {

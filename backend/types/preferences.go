@@ -3,11 +3,19 @@ package types
 import "cattail/backend/consts"
 
 type Preferences struct {
-	Behavior PreferencesBehavior  `json:"behavior" yaml:"behavior"`
-	General  PreferencesGeneral   `json:"general" yaml:"general"`
-	Editor   PreferencesEditor    `json:"editor" yaml:"editor"`
-	Cli      PreferencesCli       `json:"cli" yaml:"cli"`
-	Decoder  []PreferencesDecoder `json:"decoder" yaml:"decoder,omitempty"`
+	Behavior       PreferencesBehavior        `json:"behavior" yaml:"behavior"`
+	General        PreferencesGeneral         `json:"general" yaml:"general"`
+	Editor         PreferencesEditor          `json:"editor" yaml:"editor"`
+	Cli            PreferencesCli             `json:"cli" yaml:"cli"`
+	Decoder        []PreferencesDecoder       `json:"decoder" yaml:"decoder,omitempty"`
+	SshCredentials map[string]SSHCredential   `json:"sshCredentials" yaml:"ssh_credentials,omitempty"`
+}
+
+type SSHCredential struct {
+	Host     string `json:"host" yaml:"host"`
+	Port     int    `json:"port" yaml:"port"`
+	Username string `json:"username" yaml:"username"`
+	KeyPath  string `json:"keyPath" yaml:"key_path"`
 }
 
 func NewPreferences() Preferences {

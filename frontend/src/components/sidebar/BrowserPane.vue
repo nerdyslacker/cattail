@@ -40,7 +40,7 @@ const namespaces = computed(() => {
 
 <template>
     <div class="nav-pane-container flex-box-v">
-        <div>
+        <div class="nav-pane-inner flex-box-v">
             <n-list v-if="tailScaleStore.self != null" bordered hoverable clickable>
                 <n-list-item @click="tailScaleStore.selectedPeer = tailScaleStore.self">
                     <template #prefix>
@@ -62,7 +62,7 @@ const namespaces = computed(() => {
                 </n-list-item>
             </n-list>
 
-            <n-scrollbar style="max-height: 660px;">
+            <n-scrollbar class="nav-pane-scroll flex-item-expand">
                 <div v-for="namespace in namespaces">
                     <n-divider title-placement="left">
                         {{ namespace.name }}
@@ -128,6 +128,21 @@ const namespaces = computed(() => {
 
 :deep(.toggle-off) {
     border-color: #0000;
+}
+
+.nav-pane-container {
+    height: 100%;
+    min-height: 0;
+}
+
+.nav-pane-inner {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.nav-pane-scroll {
+    min-height: 0;
 }
 
 .nav-pane-top {
